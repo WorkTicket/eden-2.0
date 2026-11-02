@@ -1,4 +1,13 @@
-"""Simulation runner. `python -m engine.sim.runner --ticks 100 --llm mock`"""
+"""Simulation runner.
+
+Two modes:
+- Bounded (default): `run(cfg)` creates a fresh world, ticks N times, writes
+  events.jsonl + snapshots. Deterministic, used by tests and `make run`.
+- Continuous service: `python -m engine.sim.runner --ticks N --resume` runs the
+  Runtime service, which checkpoints on pause/stop and resumes from the latest
+  checkpoint when `--resume` is given. Logical time only moves forward; inhabitants
+  never perceive a stop.
+"""
 from __future__ import annotations
 
 import argparse
@@ -12,6 +21,7 @@ from cognition.agent import Agent
 from cognition.identity.persona import Persona
 from engine.llm.client import get_llm
 from engine.sim.world import World
+from engine.service.runtime import Runtime, RuntimeConfig
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -26,9 +36,11 @@ class RunConfig:
     map_path: Path = ROOT / "world" / "maps" / "eden.yaml"
     laws_path: Path = ROOT / "world" / "laws" / "physics.yaml"
     seeds_dir: Path = ROOT / "agents" / "seeds"
+    resume: bool = False
 
 
 def run(cfg: RunConfig) -> Path:
+    """Bounded run: fresh world, N ticks, write events.jsonl + snapshots."""
     llm = get_llm(cfg.llm)
     world = World(cfg.map_path, cfg.laws_path)
     agents: list[Agent] = []
@@ -61,10 +73,50 @@ def run(cfg: RunConfig) -> Path:
     return out
 
 
+def run_continuous(cfg: RunConfig, serve_port: int | None = None) -> Path:
+    """Continuous run via the Runtime service. Checkpoints on exit."""
+    rt_cfg = RuntimeConfig(
+        run_id=cfg.run_id or "eden",
+        llm=cfg.llm,
+        seed=cfg.seed,
+        map_path=cfg.map_path,
+        laws_path=cfg.laws_path,
+        seeds_dir=cfg.seeds_dir,
+        data_dir=cfg.out_dir,
+        ticks=cfg.ticks,
+        resume=cfg.resume,
+    )
+    rt = Runtime(rt_cfg)
+    rt.start(resume=cfg.resume)
+    server = None
+    if serve_port:
+        from engine.service.server import LiveServer
+        server = LiveServer(rt, port=serve_port)
+        server.start()
+    try:
+        rt.play(max_ticks=cfg.ticks)
+    finally:
+        rt.pause()
+        rt.close()
+        if server is not None:
+            server.stop()
+    return rt.run_dir
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--ticks", type=int, default=100)
     ap.add_argument("--llm", default="mock", choices=["mock", "anthropic"])
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--resume", action="store_true",
+                    help="resume from the latest checkpoint of --run-id")
+    ap.add_argument("--run-id", default=None, help="run id for continuous mode")
+    ap.add_argument("--serve", type=int, default=0,
+                    help="also host the live HTTP operator server on this port (e.g. 8765)")
     a = ap.parse_args()
-    print(run(RunConfig(ticks=a.ticks, llm=a.llm, seed=a.seed)))
+    cfg = RunConfig(ticks=a.ticks, llm=a.llm, seed=a.seed,
+                    run_id=a.run_id, resume=a.resume)
+    if a.resume or a.run_id or a.serve:
+        print(run_continuous(cfg, serve_port=a.serve if a.serve else None))
+    else:
+        print(run(cfg))

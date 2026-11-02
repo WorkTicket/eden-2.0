@@ -12,7 +12,7 @@ Status: `todo` | `in progress (who, date)` | `done`. Lanes: ENG, COG, WORLD, EVA
 | T-105 | COG | Conversation module: multi-turn dialogue, summarized into memory | todo | |
 | T-106 | EVAL | Memory-recall eval (ask in-world questions; score vs event log) | todo | |
 | T-107 | EVAL | Retrieval recall@k labeled set + weight tuning | todo | |
-| T-108 | ENG | Snapshot **load** path: resume a run from `snapshots/` | todo | prerequisite for M3 |
+| T-108 | ENG | Snapshot **load** path: resume a run from `snapshots/` | done | Replaced by checkpoint resume: `engine/service/runtime.py` + `--resume` restores the latest SQLite checkpoint and continues forward; no rewinding (ADR-0007). |
 | T-109 | COG | Mock LLM: make less degenerate (vary by observations/state) so mock runs exercise more code | todo | |
 
 ## M2 — Social world
@@ -53,3 +53,4 @@ Status: `todo` | `in progress (who, date)` | `done`. Lanes: ENG, COG, WORLD, EVA
 - T-109 (partial) Mock LLM no longer loops on identical prompts (call counter); 300-tick runs now show varied movement
 - T-205 (v1) Replay viewer: sun, planet, Eden, close-up; `make viewer` (see `docs/11`)
 - Civilization data seed: resources, recipes, tech tree + integrity tests
+- Continuous simulation: play/pause runtime, logical clock, SQLite checkpoint/restore, live operator server (`engine/service`, `engine/persistence`, `engine/sim/clock.py`); ADR-0007.

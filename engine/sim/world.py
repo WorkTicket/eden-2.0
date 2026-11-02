@@ -58,6 +58,34 @@ class World:
             self.hunger[a] = min(1.0, self.hunger[a] + self.laws["hunger_per_tick"])
         self._speech_prev, self._speech_now = self._speech_now, []
 
+    def to_dict(self) -> dict:
+        return {
+            "positions": {k: list(v) for k, v in self.positions.items()},
+            "names": dict(self.names),
+            "hunger": dict(self.hunger),
+            "fruit": {f"{x},{y}": v for (x, y), v in self.fruit.items()},
+            "regrow": {f"{x},{y}": v for (x, y), v in self._regrow.items()},
+            "speech_now": [[aid, list(pos), text] for aid, pos, text in self._speech_now],
+            "speech_prev": [[aid, list(pos), text] for aid, pos, text in self._speech_prev],
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict, map_path: str | Path, laws_path: str | Path) -> "World":
+        world = cls.__new__(cls)
+        m = yaml.safe_load(Path(map_path).read_text())
+        world.laws = yaml.safe_load(Path(laws_path).read_text())
+        world.legend = m["legend"]
+        world.rows = m["rows"]
+        world.h, world.w = len(world.rows), len(world.rows[0])
+        world.positions = {k: tuple(v) for k, v in d["positions"].items()}
+        world.names = dict(d["names"])
+        world.hunger = dict(d["hunger"])
+        world.fruit = {tuple(int(c) for c in k.split(",")): v for k, v in d["fruit"].items()}
+        world._regrow = {tuple(int(c) for c in k.split(",")): v for k, v in d["regrow"].items()}
+        world._speech_now = [tuple([aid, tuple(pos), text]) for aid, pos, text in d["speech_now"]]
+        world._speech_prev = [tuple([aid, tuple(pos), text]) for aid, pos, text in d["speech_prev"]]
+        return world
+
     def observe(self, aid: str) -> list[str]:
         x, y = self.positions[aid]
         r = self.laws["perception_radius"]

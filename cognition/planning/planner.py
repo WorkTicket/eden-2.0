@@ -44,7 +44,7 @@ def decide(llm: LLM, persona: Persona, plan: list[str], memories: list[str],
     prompt = (
         f"Today's intentions: {'; '.join(plan) or 'none yet'}\n"
         f"Relevant memories:\n" + "\n".join(f"- {m}" for m in memories) + "\n"
-        f"Right now:\n" + "\n".join(f"- {o}" for o in observations) + "\n\n"
+        "Right now:\n" + "\n".join(f"- {o}" for o in observations) + "\n\n"
         "Choose ONE action. Reply with only the action:\n"
         "move <north|south|east|west>\nsay <what you say aloud>\neat   (only next to a fruit tree with fruit)\nwait"
     )

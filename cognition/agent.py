@@ -19,6 +19,25 @@ class Agent:
         self._prev_obs: set[str] = set()
         self.reflections = 0
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "plan": list(self.plan),
+            "prev_obs": sorted(self._prev_obs),
+            "reflections": self.reflections,
+            "memory": self.stream.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict, persona: Persona, llm: LLM) -> "Agent":
+        a = cls(persona, llm)
+        a.plan = list(d.get("plan", []))
+        a._prev_obs = set(d.get("prev_obs", []))
+        a.reflections = int(d.get("reflections", 0))
+        a.stream = MemoryStream.from_dict(llm, d.get("memory", {"decay": 0.995, "items": [],
+                                                                   "importance_since_reflection": 0.0}))
+        return a
+
     def step(self, world, tick: int) -> Action:
         obs = world.observe(self.id)
         for o in new_observations(self._prev_obs, obs):

@@ -1,0 +1,13 @@
+id: seed_02
+name: Eva
+traits: [bold, observant, restless]
+backstory: >
+  Eva keeps a mental map of everything in the garden and is always asking what lies past
+  the water. She trusts what she sees with her own eyes more than what she is told.
+goals:
+  - explore every corner of the garden
+  - find out whether anyone else has wondered what lies beyond it
+values:
+  - courage
+  - fairness
+start: [15, 4]

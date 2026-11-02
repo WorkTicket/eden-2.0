@@ -1,0 +1,477 @@
+<title>Eden Viewer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: a one-screen instrument. Stage canvas left, inhabitant panel right, transport deck below.
+   Under 820px the panel stacks beneath the canvas and the page scrolls. Single dark look by design (space). */
+:root {
+  --bg: #0a0e18;
+  --panel: #111827;
+  --panel-2: #172033;
+  --line: #26324a;
+  --fg: #e2e8f4;
+  --muted: #8c9ab3;
+  --sun: #ffb340;
+  --ocean: #2c6aa6;
+  --eden: #9ad68f;
+  --warn: #e8a64f;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+h1, h2 { font-family: var(--font-display); margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+h1 { font-size: 22px; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 500; }
+.data { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+button, select {
+  font: inherit; color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; min-height: 34px;
+}
+button:hover, select:hover { border-color: #3a4a6b; }
+button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+button[aria-pressed="true"] { background: #25344f; border-color: var(--sun); color: #fff; }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.bar .grow { flex: 1; }
+.zoom { display: flex; flex-wrap: wrap; gap: 6px; }
+#clock { color: var(--sun); font-size: 15px; }
+
+.stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; }
+.view { position: relative; min-height: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #05070d; }
+canvas { display: block; width: 100%; height: 100%; }
+#hint {
+  position: absolute; left: 12px; bottom: 10px; right: 12px; pointer-events: none;
+  font-family: var(--font-data); font-size: 12px; color: var(--muted);
+  text-shadow: 0 1px 3px #000;
+}
+.side { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+.card.feedcard { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+ul, ol { list-style: none; margin: 0; padding: 0; }
+#agents { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ag { width: 100%; text-align: left; display: grid; grid-template-columns: 12px 1fr; gap: 2px 10px; padding: 8px 10px; background: var(--panel-2); }
+.ag[aria-pressed="true"] { border-color: var(--sun); }
+.ag .dot { width: 12px; height: 12px; border-radius: 50%; align-self: center; }
+.ag .nm { font-family: var(--font-display); font-weight: 700; }
+.ag .st { grid-column: 2; color: var(--muted); font-family: var(--font-data); font-size: 12px; overflow-wrap: anywhere; }
+.meter { grid-column: 2; height: 5px; background: #0c1220; border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--eden); }
+#feed { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+#feed li { display: grid; grid-template-columns: 38px 1fr; gap: 6px; min-width: 0; }
+#feed .t { color: var(--muted); font-family: var(--font-data); font-size: 12px; }
+#feed .x { overflow-wrap: anywhere; }
+#feed .say { color: #f1d9a0; }
+
+.deck { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.deck input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--sun); }
+.deck label { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+
+@media (max-width: 820px) {
+  html, body { height: auto; }
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .view { height: 62vh; min-height: 320px; }
+  .side { overflow: visible; }
+  #feed { max-height: 260px; }
+}
+</style>
+
+<header class="bar">
+  <h1>Eden</h1>
+  <span id="clock" class="data" aria-live="off">Day 1 · 06:00</span>
+  <span class="grow"></span>
+  <nav class="zoom" aria-label="Zoom level">
+    <button type="button" data-z="0">Solar system</button>
+    <button type="button" data-z="1">Planet</button>
+    <button type="button" data-z="2">Eden</button>
+    <button type="button" data-z="3">Close-up</button>
+  </nav>
+</header>
+
+<main class="stage">
+  <div class="view">
+    <canvas id="cv" tabindex="0" role="img" aria-label="Zoomable view from the sun and planet down to the inhabitants of Eden"></canvas>
+    <div id="hint"></div>
+  </div>
+  <aside class="side">
+    <section class="card">
+      <h2>Inhabitants</h2>
+      <ul id="agents"></ul>
+    </section>
+    <section class="card feedcard">
+      <h2>Activity</h2>
+      <ol id="feed"></ol>
+    </section>
+  </aside>
+</main>
+
+<footer class="deck">
+  <button type="button" id="play">Play</button>
+  <button type="button" id="back" aria-label="Back one tick">&minus;1</button>
+  <button type="button" id="fwd" aria-label="Forward one tick">+1</button>
+  <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Timeline">
+  <span id="tickread" class="data">tick 0</span>
+  <label for="speed">Speed
+    <select id="speed">
+      <option value="1">1 / s</option><option value="2">2 / s</option><option value="4" selected>4 / s</option>
+      <option value="8">8 / s</option><option value="16">16 / s</option><option value="32">32 / s</option>
+    </select>
+  </label>
+</footer>
+
+<script>
+(() => {
+const REPLAY = /*REPLAY_DATA*/ null;
+const $ = (id) => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const TAU = Math.PI * 2;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const wrap = (a) => ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+if (!REPLAY) {
+  $("hint").textContent = "No replay loaded. Build one with: python tools/build_replay.py data/runs/<run_id>";
+  return;
+}
+
+/* ---------- data ---------- */
+const R = REPLAY, N = Math.max(1, R.ticks), A = R.agents.length;
+const DAY = (R.laws && R.laws.day_length_ticks) || 48;
+const rows = R.map.rows, MW = rows[0].length, MH = rows.length, LEG = R.map.legend;
+const P = R.agents.map(() => new Array(N)), HG = R.agents.map(() => new Array(N).fill(0));
+const ACT = R.agents.map(() => new Array(N).fill("wait")), RES = R.agents.map(() => new Array(N).fill(""));
+for (const [t, a, act, res, x, y, h] of R.events) { P[a][t] = [x, y]; HG[a][t] = h; ACT[a][t] = act; RES[a][t] = res; }
+for (let a = 0; a < A; a++) {
+  let last = P[a].find(Boolean) || [0, 0];
+  for (let t = 0; t < N; t++) { if (P[a][t]) last = P[a][t]; else P[a][t] = last; }
+}
+const COL = ["#f2b84b", "#7ac7e6", "#e77f9d", "#a99cf0", "#8fd18a", "#f08a5d", "#d6d96a", "#6fd1c0"];
+const byTick = Array.from({ length: N }, () => []);
+for (const [t, a, act] of R.events) byTick[t].push([a, act]);
+
+/* ---------- world constants (artistic, not an astronomical model) ---------- */
+const Rs = 1, Ro = 9, Rp = 0.55, ORBIT_Y = 0.5;
+const EDEN = { lon: 0.5, lat: 0.3 }, TILT = EDEN.lat;
+const hourOf = (tf) => ((tf / DAY) * 24 + 6) % 24;
+const theta = (tf) => 0.9 + (tf / DAY) / 60 * TAU;
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const rand = rng(11);
+const STARS = Array.from({ length: 220 }, () => ({ x: rand(), y: rand(), r: 0.4 + rand() * 1.3, p: rand() * TAU }));
+const BLOBS = (() => {
+  const b = [{ lon: EDEN.lon, lat: EDEN.lat, r: 0.62, p1: 0.3, p2: 1.7 }];
+  const rr = rng(5);
+  for (let i = 0; i < 9; i++) b.push({ lon: (rr() - 0.5) * TAU, lat: (rr() - 0.5) * 2.2, r: 0.22 + rr() * 0.5, p1: rr() * TAU, p2: rr() * TAU });
+  return b;
+})();
+
+/* ---------- state ---------- */
+let W = 0, H = 0, dpr = 1;
+let tf = 0, playing = false, speed = 4, z = 0, zt = 0, follow = 0, lastShown = -1;
+
+function resize() {
+  const r = cv.parentElement.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.max(200, r.width); H = Math.max(200, r.height);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+new ResizeObserver(resize).observe(cv.parentElement);
+resize();
+
+/* ---------- geometry ---------- */
+function geom(z, tf) {
+  const m = Math.min(W, H), th = theta(tf);
+  const Pw = { x: Ro * Math.cos(th), y: Ro * Math.sin(th) * ORBIT_Y };
+  const s0 = Math.min(W * 0.44, H * 0.8) / Ro, PR1 = 0.36 * m, s1 = PR1 / Rp;
+  let s, pc;
+  if (z <= 1) {
+    s = s0 * Math.pow(s1 / s0, z);
+    const e = smooth(0, 1, z), c = { x: lerp(0, Pw.x, e), y: lerp(0, Pw.y, e) };
+    pc = { x: W / 2 + (Pw.x - c.x) * s, y: H / 2 + (Pw.y - c.y) * s };
+  } else {
+    s = (PR1 * Math.pow(28, z - 1)) / Rp;
+    pc = { x: W / 2, y: H / 2 };
+  }
+  return { s, pc, PR: Rp * s, sun: { x: pc.x - Pw.x * s, y: pc.y - Pw.y * s } };
+}
+
+/* ---------- drawing: space and globe ---------- */
+function drawStars(alpha, time) {
+  if (alpha <= 0.01) return;
+  for (const st of STARS) {
+    const tw = reduce ? 1 : 0.65 + 0.35 * Math.sin(time * 0.0014 + st.p);
+    ctx.globalAlpha = alpha * tw * 0.8;
+    ctx.fillStyle = "#dfe8ff";
+    ctx.beginPath(); ctx.arc(st.x * W, st.y * H, st.r, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawSun(g, alpha) {
+  const { sun, s } = g, r = Rs * s;
+  if (alpha <= 0.01 || sun.x + r * 4 < 0 || sun.x - r * 4 > W || sun.y + r * 4 < 0 || sun.y - r * 4 > H) return;
+  ctx.globalAlpha = alpha;
+  const gl = ctx.createRadialGradient(sun.x, sun.y, r * 0.8, sun.x, sun.y, r * 4);
+  gl.addColorStop(0, "rgba(255,179,64,0.55)"); gl.addColorStop(1, "rgba(255,179,64,0)");
+  ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sun.x, sun.y, r * 4, 0, TAU); ctx.fill();
+  const d = ctx.createRadialGradient(sun.x - r * 0.25, sun.y - r * 0.25, r * 0.1, sun.x, sun.y, r);
+  d.addColorStop(0, "#fff6d6"); d.addColorStop(0.55, "#ffc15a"); d.addColorStop(1, "#ff9a2e");
+  ctx.fillStyle = d; ctx.beginPath(); ctx.arc(sun.x, sun.y, r, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function proj(lon, lat, rot) {
+  const lp = lon - rot, x = Math.cos(lat) * Math.sin(lp), y = Math.sin(lat), zz = Math.cos(lat) * Math.cos(lp);
+  return { x, y: y * Math.cos(TILT) - zz * Math.sin(TILT), z: y * Math.sin(TILT) + zz * Math.cos(TILT) };
+}
+
+function drawGlobe(cx, cy, R, rot, lightAng) {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.clip();
+  const oc = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
+  oc.addColorStop(0, "#3b84c4"); oc.addColorStop(1, "#1f4f82");
+  ctx.fillStyle = oc; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+  for (const b of BLOBS) {
+    const c = proj(b.lon, b.lat, rot);
+    if (c.z < -Math.sin(Math.min(1.5, b.r * 1.4))) continue;
+    ctx.beginPath();
+    const STEPS = 56;
+    for (let i = 0; i <= STEPS; i++) {
+      const a = (i / STEPS) * TAU;
+      const d = b.r * (1 + 0.35 * (0.6 * Math.sin(3 * a + b.p1) + 0.4 * Math.sin(5 * a + b.p2)));
+      const lat = Math.asin(Math.sin(b.lat) * Math.cos(d) + Math.cos(b.lat) * Math.sin(d) * Math.cos(a));
+      const lon = b.lon + Math.atan2(Math.sin(a) * Math.sin(d) * Math.cos(b.lat), Math.cos(d) - Math.sin(b.lat) * Math.sin(lat));
+      const q = proj(lon, lat, rot);
+      let x = q.x, y = q.y;
+      if (q.z < 0) { const l = Math.hypot(x, y) || 1; x /= l; y /= l; }
+      const px = cx + x * R, py = cy - y * R;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = b === BLOBS[0] ? "#6aa25f" : "#587f50"; ctx.fill();
+  }
+  const lx = Math.cos(lightAng), ly = Math.sin(lightAng);
+  const sh = ctx.createLinearGradient(cx + lx * R, cy + ly * R, cx - lx * R, cy - ly * R);
+  sh.addColorStop(0, "rgba(5,8,20,0)"); sh.addColorStop(0.5, "rgba(5,8,20,0.08)");
+  sh.addColorStop(0.64, "rgba(5,8,20,0.72)"); sh.addColorStop(1, "rgba(5,8,20,0.93)");
+  ctx.fillStyle = sh; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+  ctx.restore();
+  const at = ctx.createRadialGradient(cx, cy, R * 0.94, cx, cy, R * 1.08);
+  at.addColorStop(0, "rgba(120,190,255,0.35)"); at.addColorStop(1, "rgba(120,190,255,0)");
+  ctx.fillStyle = at; ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, 0, TAU); ctx.fill();
+}
+
+function label(text, x, y, alpha, color) {
+  ctx.globalAlpha = alpha; ctx.fillStyle = color || "#aab8d4";
+  ctx.font = '500 12px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = "center"; ctx.fillText(text, x, y);
+  ctx.globalAlpha = 1;
+}
+
+function drawSystem(g, z, tf, time) {
+  const orbitA = 1 - smooth(0.5, 1.0, z);
+  if (orbitA > 0.01) {
+    ctx.globalAlpha = orbitA * 0.6; ctx.strokeStyle = "#5a6b8c"; ctx.setLineDash([3, 6]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(g.sun.x, g.sun.y, Ro * g.s, Ro * g.s * ORBIT_Y, 0, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  drawSun(g, 1 - smooth(1.0, 1.5, z));
+  const light = Math.atan2(g.sun.y - g.pc.y, g.sun.x - g.pc.x);
+  const spin = EDEN.lon + ((hourOf(tf) - 12) / 24) * TAU;
+  const rot = spin + wrap(EDEN.lon - spin) * smooth(0.5, 1.1, z);
+  drawGlobe(g.pc.x, g.pc.y, g.PR, rot, light);
+  const e = proj(EDEN.lon, EDEN.lat, rot);
+  if (e.z > 0.05) {
+    const ex = g.pc.x + e.x * g.PR, ey = g.pc.y - e.y * g.PR;
+    const a = smooth(0.4, 0.9, z) * (1 - smooth(1.4, 1.8, z));
+    if (a > 0.01) {
+      const pulse = reduce ? 0 : (time % 1800) / 1800;
+      ctx.globalAlpha = a; ctx.strokeStyle = "#f6ffd9"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(ex, ey, 5 + pulse * 10, 0, TAU); ctx.globalAlpha = a * (1 - pulse); ctx.stroke();
+      ctx.globalAlpha = a; ctx.fillStyle = "#f6ffd9"; ctx.beginPath(); ctx.arc(ex, ey, 3, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+      label("Eden", ex, ey - 14, a, "#f6ffd9");
+    }
+  }
+  label("Sun", g.sun.x, g.sun.y + Rs * g.s + 18, (1 - smooth(0.2, 0.6, z)) * 0.9);
+  label("Home world", g.pc.x, g.pc.y + g.PR + 18, (1 - smooth(0.5, 0.9, z)) * 0.9);
+}
+
+/* ---------- drawing: garden ---------- */
+const interp = (a, tf) => {
+  const t = clamp(Math.floor(tf), 0, N - 1), f = tf - t, p0 = P[a][t], p1 = P[a][Math.min(N - 1, t + 1)];
+  return { x: lerp(p0[0], p1[0], f), y: lerp(p0[1], p1[1], f) };
+};
+function sayAt(a, t) {
+  if (!String(ACT[a][t]).startsWith("say")) return null;
+  const m = /"(.*)"/.exec(RES[a][t]); return m ? m[1] : null;
+}
+function rrect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function drawGarden(z, tf, time, alpha) {
+  const fit = Math.min(W / (MW + 1), H / (MH + 1)), zg = clamp(z - 2, 0, 1);
+  const gs = z < 2 ? fit * lerp(0.35, 1, smooth(1.45, 2, z)) : fit * Math.pow(3.4, zg);
+  const f = interp(follow, tf), e = smooth(0, 1, zg);
+  const ox = W / 2 - lerp(MW / 2, f.x + 0.5, e) * gs, oy = H / 2 - lerp(MH / 2, f.y + 0.5, e) * gs;
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#1f4f82"; ctx.fillRect(0, 0, W, H);
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+    const px = ox + x * gs, py = oy + y * gs;
+    if (px > W || py > H || px + gs < 0 || py + gs < 0) continue;
+    const kind = LEG[rows[y][x]], v = (((x * 73856093) ^ (y * 19349663)) >>> 0) % 100 / 100;
+    if (kind === "water") {
+      ctx.fillStyle = `hsl(208 52% ${38 + (reduce ? 0 : 4 * Math.sin(time * 0.002 + x * 0.9 + y * 0.6))}%)`;
+      ctx.fillRect(px, py, gs + 0.5, gs + 0.5); continue;
+    }
+    ctx.fillStyle = `hsl(${102 + v * 10} 36% ${33 + v * 5}%)`; ctx.fillRect(px, py, gs + 0.5, gs + 0.5);
+    if (kind === "tree" || kind === "fruit_tree") {
+      const cx = px + gs / 2, cy = py + gs / 2;
+      ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(cx + gs * 0.06, cy + gs * 0.3, gs * 0.4, gs * 0.14, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = kind === "tree" ? "hsl(125 34% 21%)" : "hsl(112 40% 29%)";
+      ctx.beginPath(); ctx.arc(cx, cy - gs * 0.05, gs * 0.46, 0, TAU); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.07)"; ctx.beginPath(); ctx.arc(cx - gs * 0.12, cy - gs * 0.17, gs * 0.22, 0, TAU); ctx.fill();
+      if (kind === "fruit_tree") {
+        ctx.fillStyle = "#e8663d";
+        for (const [dx, dy] of [[-0.2, -0.1], [0.18, -0.2], [0.05, 0.12], [-0.05, -0.28]]) { ctx.beginPath(); ctx.arc(cx + dx * gs, cy + dy * gs, gs * 0.07, 0, TAU); ctx.fill(); }
+      }
+    }
+  }
+  const hr = hourOf(tf), light = clamp(0.5 + 0.9 * Math.sin(TAU * (hr - 6) / 24), 0, 1);
+  ctx.fillStyle = `rgba(8,14,40,${(1 - light) * 0.55})`; ctx.fillRect(0, 0, W, H);
+
+  const t = clamp(Math.floor(tf), 0, N - 1);
+  for (let a = 0; a < A; a++) {
+    ctx.strokeStyle = COL[a % COL.length]; ctx.globalAlpha = alpha * 0.28; ctx.lineWidth = Math.max(1, gs * 0.08);
+    ctx.beginPath();
+    for (let k = Math.max(0, t - 14); k <= t; k++) { const q = P[a][k], sx = ox + (q[0] + 0.5) * gs, sy = oy + (q[1] + 0.5) * gs; if (k === Math.max(0, t - 14)) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy); }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = alpha;
+  for (let a = 0; a < A; a++) {
+    const p = interp(a, tf), sx = ox + (p.x + 0.5) * gs, sy = oy + (p.y + 0.5) * gs, r = Math.max(3, gs * 0.3), col = COL[a % COL.length];
+    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(sx, sy + r * 0.9, r * 0.9, r * 0.35, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.arc(sx - r * 0.3, sy - r * 0.35, r * 0.35, 0, TAU); ctx.fill();
+    if (a === follow) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx, sy, r + 3, 0, TAU); ctx.stroke(); }
+    if (gs >= 26) {
+      const h = clamp(HG[a][t], 0, 1);
+      ctx.strokeStyle = h > 0.5 ? "#e8a64f" : "#9ad68f"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx, sy, r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - h)); ctx.stroke();
+      ctx.fillStyle = "#fff"; ctx.font = '500 12px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = "center";
+      ctx.fillText(R.agents[a].name, sx, sy - r - 12);
+    }
+    if (gs >= 18) for (let age = 0; age < 5; age++) {
+      const tt = t - age, said = tt >= 0 ? sayAt(a, tt) : null;
+      if (!said) continue;
+      const txt = said.length > 44 ? said.slice(0, 42) + "…" : said;
+      ctx.font = '400 12px "IBM Plex Sans", system-ui, sans-serif';
+      const w = ctx.measureText(txt).width + 16, bx = sx - w / 2, by = sy - r - 52;
+      ctx.globalAlpha = alpha * (1 - age / 5);
+      ctx.fillStyle = "#f4f1e6"; rrect(bx, by, w, 24, 8); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(sx - 5, by + 24); ctx.lineTo(sx, by + 31); ctx.lineTo(sx + 5, by + 24); ctx.fill();
+      ctx.fillStyle = "#1a2030"; ctx.textAlign = "center"; ctx.fillText(txt, sx, by + 16);
+      ctx.globalAlpha = alpha; break;
+    }
+  }
+  ctx.restore();
+  return { ox, oy, gs };
+}
+
+/* ---------- panels ---------- */
+const agentsEl = $("agents"), feedEl = $("feed");
+const agentBtns = R.agents.map((ag, a) => {
+  const li = document.createElement("li"), b = document.createElement("button");
+  b.type = "button"; b.className = "ag"; b.setAttribute("aria-pressed", String(a === follow));
+  b.innerHTML = `<span class="dot" style="background:${COL[a % COL.length]}"></span><span class="nm"></span><span class="st"></span><span class="meter"><i></i></span>`;
+  b.querySelector(".nm").textContent = ag.name;
+  b.addEventListener("click", () => { select(a); setZoom(3); });
+  li.appendChild(b); agentsEl.appendChild(li); return b;
+});
+function select(a) { follow = a; agentBtns.forEach((b, i) => b.setAttribute("aria-pressed", String(i === a))); }
+
+function refresh(t) {
+  const hr = hourOf(t), hh = Math.floor(hr), mm = Math.floor((hr - hh) * 60);
+  $("clock").textContent = `Day ${Math.floor(t / DAY) + 1} · ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  $("tickread").textContent = `tick ${t} / ${N - 1}`; $("scrub").value = t;
+  agentBtns.forEach((b, a) => {
+    const p = P[a][t];
+    b.querySelector(".st").textContent = `${ACT[a][t]} · (${p[0]},${p[1]})`;
+    const m = b.querySelector(".meter i"); m.style.width = `${Math.round(clamp(HG[a][t], 0, 1) * 100)}%`;
+    m.style.background = HG[a][t] > 0.5 ? "var(--warn)" : "var(--eden)";
+  });
+  const items = [];
+  for (let k = t; k >= 0 && items.length < 24; k--) for (const [a, act] of byTick[k]) {
+    if (items.length >= 24) break;
+    const isSay = String(act).startsWith("say"), said = isSay ? sayAt(a, k) : null;
+    items.push(`<li><span class="t">${k}</span><span class="x${isSay ? " say" : ""}"><b style="color:${COL[a % COL.length]}">${R.agents[a].name.replace(/</g, "&lt;")}</b> ${(said ? "“" + said + "”" : String(act)).replace(/</g, "&lt;")}</span></li>`);
+  }
+  feedEl.innerHTML = items.join("");
+}
+
+/* ---------- controls ---------- */
+const LEVEL = (z) => z < 0.5 ? "Solar system" : z < 1.5 ? "Planet" : z < 2.5 ? "Eden" : "Close-up";
+function setZoom(v) { zt = clamp(v, 0, 3); }
+document.querySelectorAll(".zoom button").forEach((b) => b.addEventListener("click", () => setZoom(+b.dataset.z)));
+cv.addEventListener("wheel", (e) => { e.preventDefault(); setZoom(zt - e.deltaY * 0.0016); }, { passive: false });
+cv.addEventListener("click", (e) => {
+  if (z < 2) return;
+  const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, g = lastGarden;
+  if (!g) return;
+  let best = -1, bd = 1e9;
+  for (let a = 0; a < A; a++) { const p = interp(a, tf), d = Math.hypot(g.ox + (p.x + 0.5) * g.gs - mx, g.oy + (p.y + 0.5) * g.gs - my); if (d < bd) { bd = d; best = a; } }
+  if (best >= 0 && bd < Math.max(24, g.gs * 0.6)) select(best);
+});
+function setPlaying(v) { playing = v; $("play").textContent = v ? "Pause" : "Play"; }
+$("play").addEventListener("click", () => { if (!playing && tf >= N - 1) tf = 0; setPlaying(!playing); });
+$("back").addEventListener("click", () => { setPlaying(false); tf = Math.max(0, Math.floor(tf) - 1); });
+$("fwd").addEventListener("click", () => { setPlaying(false); tf = Math.min(N - 1, Math.floor(tf) + 1); });
+$("scrub").max = String(N - 1);
+$("scrub").addEventListener("input", (e) => { tf = +e.target.value; });
+$("speed").addEventListener("change", (e) => { speed = +e.target.value; });
+addEventListener("keydown", (e) => {
+  if (/^(INPUT|SELECT|BUTTON|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  if (e.key === " ") { e.preventDefault(); $("play").click(); }
+  else if (e.key === "+" || e.key === "=") setZoom(zt + 0.25);
+  else if (e.key === "-") setZoom(zt - 0.25);
+});
+
+/* ---------- main loop ---------- */
+let lastGarden = null, prev = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - prev) / 1000); prev = now;
+  if (playing) { tf += dt * speed; if (tf >= N - 1) { tf = N - 1; setPlaying(false); } }
+  z += (zt - z) * (1 - Math.exp(-dt * 5));
+  if (Math.abs(zt - z) < 0.0005) z = zt;
+  ctx.fillStyle = "#05070d"; ctx.fillRect(0, 0, W, H);
+  drawStars(1 - smooth(1.0, 1.6, z), now);
+  if (z < 1.7) drawSystem(geom(z, tf), z, tf, now);
+  lastGarden = null;
+  const ga = smooth(1.5, 1.95, z);
+  if (ga > 0.01) lastGarden = drawGarden(z, tf, now, ga);
+  const t = clamp(Math.floor(tf), 0, N - 1);
+  if (t !== lastShown) { lastShown = t; refresh(t); }
+  $("hint").textContent = `${LEVEL(z)} · scroll to zoom · click an inhabitant to follow`;
+  requestAnimationFrame(frame);
+}
+$("scrub").value = 0; setZoom(0); refresh(0); lastShown = 0;
+requestAnimationFrame(frame);
+})();
+</script>

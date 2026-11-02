@@ -1,0 +1,9 @@
+# The "laws of nature" of Eden. Tunable; every change should be logged in docs/adr/ if it affects agents.
+mortality: false          # Design decision, see docs/06-ETHICS-AND-CONSCIOUSNESS.md
+hunger_per_tick: 0.02     # 0..1 scale; discomfort only, never harm
+hungry_threshold: 0.5
+eat_relief: 0.6
+fruit_per_tree: 3
+fruit_regrow_ticks: 30
+perception_radius: 5
+day_length_ticks: 48

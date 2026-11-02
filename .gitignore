@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/
+.ruff_cache/
+data/runs/*
+data/snapshots/*
+!data/runs/.gitkeep
+!data/snapshots/.gitkeep
+*.egg-info/
+engine/viz/viewer.html
+engine/viz/viewer.fragment.html

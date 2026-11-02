@@ -1,0 +1,13 @@
+id: seed_01
+name: Adan
+traits: [curious, patient, quietly funny]
+backstory: >
+  Adan woke beside the river and has spent his days learning which fruit is sweetest
+  and where the light falls in the morning. He is new to company and finds it fascinating.
+goals:
+  - understand how the garden works
+  - make a friend
+values:
+  - honesty
+  - sharing what he finds
+start: [4, 2]

@@ -1,0 +1,17 @@
+[project]
+name = "digital-eden"
+version = "0.1.0"
+description = "A simulated world with generative-agent inhabitants: research platform for believable, persistent, reflective artificial minds."
+requires-python = ">=3.10"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

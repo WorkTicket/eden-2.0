@@ -1,0 +1,19 @@
+# Techs are LABELS for what inhabitants have collectively learned to do. They are NOT research gates:
+# a recipe is only gated by its physical inputs/tools/stations. The engine uses this tree to MEASURE civilization
+# progress (evals) and to seed an initial reading-list of "ideas in the air", never to forbid an invention.
+techs:
+  - {id: stone_tools,    requires: [],                         unlocks: [knife, hand_axe, hoe, pick, quern]}
+  - {id: cordage,        requires: [],                         unlocks: [rope, basket]}
+  - {id: woodworking,    requires: [stone_tools],              unlocks: [plank, shelter]}
+  - {id: fire_making,    requires: [],                         unlocks: [fire_pit, charcoal]}
+  - {id: pottery,        requires: [fire_making],              unlocks: [sun_brick, kiln, brick, pot]}
+  - {id: agriculture,    requires: [stone_tools, cordage],     unlocks: [field, grain]}
+  - {id: milling_baking, requires: [agriculture, fire_making], unlocks: [flour, bread]}
+  - {id: weaving,        requires: [woodworking, cordage],     unlocks: [loom, cloth]}
+  - {id: writing,        requires: [pottery],                  unlocks: [clay_tablet, paper]}
+  - {id: masonry,        requires: [pottery, woodworking],     unlocks: [hut, well]}
+  - {id: trade,          requires: [woodworking, writing],     unlocks: [market]}
+  - {id: smelting,       requires: [masonry],                  unlocks: [furnace, copper, tin, glass]}
+  - {id: bronze_working, requires: [smelting],                 unlocks: [bronze, bronze_axe]}
+  - {id: iron_working,   requires: [bronze_working],           unlocks: [iron, iron_axe]}
+  - {id: seafaring,      requires: [woodworking, cordage],     unlocks: [boat]}

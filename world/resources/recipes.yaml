@@ -1,0 +1,39 @@
+# Seed recipes (physical prerequisites only). Inhabitants may INVENT more via the Game Master (docs/10, ADR-0006);
+# invented recipes are appended to the persistent registry at runtime, never here.
+# Fields: inputs {resource: n}, tool (optional, not consumed), station (optional structure nearby), output {id: n}.
+recipes:
+  - {id: rope,       inputs: {fiber: 3},                                    output: {rope: 1}}
+  - {id: knife,      inputs: {flint: 2, wood: 1},                           output: {knife: 1}}
+  - {id: hand_axe,   inputs: {stone: 1, flint: 1, wood: 1, rope: 1},        output: {hand_axe: 1}}
+  - {id: hoe,        inputs: {wood: 1, stone: 1, rope: 1},                  output: {hoe: 1}}
+  - {id: pick,       inputs: {wood: 1, stone: 2, rope: 1},                  output: {pick: 1}}
+  - {id: quern,      inputs: {stone: 3},                                    output: {quern: 1}}
+  - {id: basket,     inputs: {reeds: 6},                                    output: {basket: 1}}
+  - {id: plank,      inputs: {wood: 1}, tool: hand_axe,                     output: {plank: 2}}
+  - {id: fire_pit,   inputs: {stone: 6, wood: 2},                           output: {fire_pit: 1}}
+  - {id: charcoal,   inputs: {wood: 4}, station: fire_pit,                  output: {charcoal: 2}}
+  - {id: sun_brick,  inputs: {clay: 2, water: 1},                           output: {sun_brick: 2}}
+  - {id: kiln,       inputs: {sun_brick: 12, clay: 4},                      output: {kiln: 1}}
+  - {id: brick,      inputs: {clay: 2, charcoal: 1}, station: kiln,         output: {brick: 2}}
+  - {id: pot,        inputs: {clay: 3, charcoal: 1}, station: kiln,         output: {pot: 1}}
+  - {id: clay_tablet, inputs: {clay: 1, water: 1},                          output: {clay_tablet: 1}}
+  - {id: paper,      inputs: {reeds: 6, water: 1}, tool: knife,             output: {paper: 2}}
+  - {id: loom,       inputs: {plank: 6, rope: 4},                           output: {loom: 1}}
+  - {id: cloth,      inputs: {fiber: 8}, station: loom,                     output: {cloth: 1}}
+  - {id: field,      inputs: {seeds: 1}, tool: hoe,                         output: {field: 1}}
+  - {id: grain,      inputs: {seeds: 1, water: 1}, station: field, tool: hoe, output: {grain: 3}}
+  - {id: flour,      inputs: {grain: 2}, tool: quern,                       output: {flour: 2}}
+  - {id: bread,      inputs: {flour: 2, water: 1}, station: fire_pit,       output: {bread: 2}}
+  - {id: shelter,    inputs: {wood: 6, reeds: 10, rope: 2},                 output: {shelter: 1}}
+  - {id: hut,        inputs: {brick: 40, plank: 8, rope: 4}, tool: hand_axe, output: {hut: 1}}
+  - {id: well,       inputs: {stone: 20, rope: 2}, tool: pick,              output: {well: 1}}
+  - {id: market,     inputs: {plank: 30, rope: 6}, tool: hand_axe,          output: {market: 1}}
+  - {id: furnace,    inputs: {brick: 30, clay: 6},                          output: {furnace: 1}}
+  - {id: glass,      inputs: {sand: 5, charcoal: 3}, station: furnace,      output: {glass: 1}}
+  - {id: copper,     inputs: {copper_ore: 2, charcoal: 2}, station: furnace, output: {copper: 1}}
+  - {id: tin,        inputs: {tin_ore: 2, charcoal: 1}, station: furnace,   output: {tin: 1}}
+  - {id: bronze,     inputs: {copper: 3, tin: 1}, station: furnace,         output: {bronze: 2}}
+  - {id: iron,       inputs: {iron_ore: 3, charcoal: 3}, station: furnace,  output: {iron: 1}}
+  - {id: bronze_axe, inputs: {bronze: 2, wood: 1, rope: 1},                 output: {bronze_axe: 1}}
+  - {id: iron_axe,   inputs: {iron: 2, wood: 1, rope: 1},                   output: {iron_axe: 1}}
+  - {id: boat,       inputs: {plank: 20, rope: 10}, tool: hand_axe,         output: {boat: 1}}

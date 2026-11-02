@@ -1,0 +1,60 @@
+# Everything that can exist as an item or structure. NOT wired into the engine yet (TASK T-301).
+# category: natural | processed | tool | structure | food | material
+# eden_v0: true if present in the current map. Densities are tunable "abundance dials" (docs/10).
+# Gentle-world rule: no resource here requires harming a creature. (Fiber/reeds/clay/stone/ore/plants only.)
+natural:
+  - {id: water,      eden_v0: true,  source: rivers, lakes, rain, wells}
+  - {id: fruit,      eden_v0: true,  source: fruit trees (regrow)}
+  - {id: wood,       eden_v0: true,  source: trees (regrow slowly)}
+  - {id: stone,      eden_v0: false, source: hills, riverbeds}
+  - {id: clay,       eden_v0: false, source: riverbanks}
+  - {id: fiber,      eden_v0: false, source: tall grasses, bark}
+  - {id: flint,      eden_v0: false, source: hills, riverbeds}
+  - {id: reeds,      eden_v0: false, source: shallows}
+  - {id: sand,       eden_v0: false, source: shores, riverbeds}
+  - {id: seeds,      eden_v0: false, source: fruit and wild grasses}
+  - {id: salt,       eden_v0: false, source: shores, pans}
+  - {id: copper_ore, eden_v0: false, source: hills}
+  - {id: tin_ore,    eden_v0: false, source: hills (rare)}
+  - {id: iron_ore,   eden_v0: false, source: mountains}
+
+made:
+  # materials
+  - {id: plank,     category: material}
+  - {id: rope,      category: material}
+  - {id: charcoal,  category: material}
+  - {id: sun_brick, category: material}
+  - {id: brick,     category: material}
+  - {id: cloth,     category: material}
+  - {id: paper,     category: material}
+  - {id: clay_tablet, category: material}
+  - {id: glass,     category: material}
+  - {id: copper,    category: material}
+  - {id: tin,       category: material}
+  - {id: bronze,    category: material}
+  - {id: iron,      category: material}
+  # food
+  - {id: grain,     category: food}
+  - {id: flour,     category: food}
+  - {id: bread,     category: food}
+  # tools and containers
+  - {id: hand_axe,  category: tool}
+  - {id: knife,     category: tool}
+  - {id: hoe,       category: tool}
+  - {id: pick,      category: tool}
+  - {id: quern,     category: tool}
+  - {id: basket,    category: tool}
+  - {id: pot,       category: tool}
+  - {id: bronze_axe, category: tool}
+  - {id: iron_axe,  category: tool}
+  # structures
+  - {id: fire_pit,  category: structure}
+  - {id: kiln,      category: structure}
+  - {id: furnace,   category: structure}
+  - {id: loom,      category: structure}
+  - {id: field,     category: structure}
+  - {id: shelter,   category: structure}
+  - {id: hut,       category: structure}
+  - {id: well,      category: structure}
+  - {id: market,    category: structure}
+  - {id: boat,      category: structure}

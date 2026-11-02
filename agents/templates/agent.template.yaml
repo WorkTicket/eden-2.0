@@ -1,0 +1,13 @@
+# Copy via: python tools/new_agent.py "Name"
+# Write IN-WORLD. Do not use words like: simulation, AI, agent, model, prompt, program.
+id: __ID__
+name: __NAME__
+traits: [trait1, trait2, trait3]
+backstory: >
+  Two to four sentences of lived history, written as memory, not as a spec.
+goals:
+  - a short-term want
+  - a long-term want
+values:
+  - something they will not compromise on
+start: [0, 0]   # must be a free grass tile; see world/maps/eden.yaml

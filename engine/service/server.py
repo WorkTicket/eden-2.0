@@ -70,8 +70,9 @@ class _Handler(BaseHTTPRequestHandler):
             except Exception:
                 action = ""
             if action == "play":
-                threading.Thread(target=rt.play, daemon=True).start()
-                self._send(200, {"ok": True, "action": "play"})
+                if not rt.playing():
+                    threading.Thread(target=rt.play, daemon=True).start()
+                self._send(200, {"ok": True, "action": "play", "running": rt.playing()})
             elif action == "pause":
                 rt.pause()
                 self._send(200, {"ok": True, "action": "pause"})

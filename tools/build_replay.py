@@ -9,12 +9,32 @@ from pathlib import Path
 
 import yaml
 
+from engine.persistence import CheckpointStore
+
 ROOT = Path(__file__).resolve().parents[1]
 VIZ = ROOT / "engine" / "viz"
 
 
+def _load_events(run_dir: Path) -> list[dict]:
+    events_path = run_dir / "events.jsonl"
+    if events_path.exists():
+        with open(events_path, encoding="utf-8") as f:
+            return [json.loads(line) for line in f]
+    # Continuous runs write to SQLite; export the append-only event log to JSONL.
+    db = run_dir / "state.db"
+    if db.exists():
+        store = CheckpointStore(run_dir)
+        try:
+            store.export_jsonl(events_path)
+        finally:
+            store.close()
+        with open(events_path, encoding="utf-8") as f:
+            return [json.loads(line) for line in f]
+    raise FileNotFoundError(f"no events.jsonl or state.db in {run_dir}")
+
+
 def build(run_dir: Path) -> dict:
-    events = [json.loads(line) for line in open(run_dir / "events.jsonl")]
+    events = _load_events(run_dir)
     ids = sorted({e["agent"] for e in events})
     agents = []
     for i in ids:

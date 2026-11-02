@@ -54,7 +54,7 @@ class CheckpointStore:
         self.run_dir = Path(run_dir)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = self.run_dir / "state.db"
-        self._conn = sqlite3.connect(str(self.db_path))
+        self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
         self._ensure_meta()

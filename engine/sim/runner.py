@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @dataclass
 class RunConfig:
-    ticks: int = 100
+    ticks: int | None = None
     llm: str = "mock"
     seed: int = 0
     out_dir: Path = ROOT / "data" / "runs"
@@ -41,6 +42,7 @@ class RunConfig:
 
 def run(cfg: RunConfig) -> Path:
     """Bounded run: fresh world, N ticks, write events.jsonl + snapshots."""
+    ticks = cfg.ticks if cfg.ticks is not None else 100
     llm = get_llm(cfg.llm)
     world = World(cfg.map_path, cfg.laws_path)
     agents: list[Agent] = []
@@ -55,7 +57,7 @@ def run(cfg: RunConfig) -> Path:
     rng = random.Random(cfg.seed)
 
     with open(out / "events.jsonl", "w") as f:
-        for t in range(cfg.ticks):
+        for t in range(ticks):
             world.tick_begin()
             order = agents[:]
             rng.shuffle(order)
@@ -89,12 +91,22 @@ def run_continuous(cfg: RunConfig, serve_port: int | None = None) -> Path:
     rt = Runtime(rt_cfg)
     rt.start(resume=cfg.resume)
     server = None
-    if serve_port:
-        from engine.service.server import LiveServer
-        server = LiveServer(rt, port=serve_port)
-        server.start()
+    play_thread = None
     try:
-        rt.play(max_ticks=cfg.ticks)
+        if serve_port:
+            from engine.service.server import LiveServer
+            server = LiveServer(rt, port=serve_port)
+            server.start()
+            # play in a background thread so the HTTP server stays responsive
+            play_thread = threading.Thread(target=rt.play, kwargs={"max_ticks": cfg.ticks}, daemon=True)
+            play_thread.start()
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
+        else:
+            rt.play(max_ticks=cfg.ticks)
     finally:
         rt.pause()
         rt.close()
@@ -105,7 +117,8 @@ def run_continuous(cfg: RunConfig, serve_port: int | None = None) -> Path:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ticks", type=int, default=100)
+    ap.add_argument("--ticks", type=int, default=None,
+                    help="tick budget (bounded mode only). Continuous mode runs until paused/stopped.")
     ap.add_argument("--llm", default="mock", choices=["mock", "anthropic"])
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--resume", action="store_true",
